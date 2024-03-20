@@ -185,12 +185,18 @@ class IRP_Utils {
     <?php
     }
 
+    public function getData()
+    {
+        $result=$this->merge(TRUE, $_POST, $_GET);
+        return $result;
+    }
+
     function aqs($prefix, $defaults=array()) {
         global $irp;
 
         $removePrefix=TRUE;
         $args=array();
-        $array=$this->merge(TRUE, $_POST, $_GET);
+        $array=$this->getData();
         foreach($array as $k=>$v) {
             if($this->startsWith($k, $prefix)) {
                 if($removePrefix) {
@@ -206,12 +212,16 @@ class IRP_Utils {
         return intval($this->qs($name, $default));
     }
     //per ottenere un campo dal $_GET oppure dal $_POST
-    function qs($name, $default = '') {
+    function qs($name, $default = '')
+    {
         $result = $default;
+
         if (isset($_GET[$name])) {
             $result = sanitize_text_field( $_GET[$name] );
-        } elseif (isset($_POST[$name])) {
-            $result = sanitize_text_field( $_POST[$name] );
+        } else {
+            if (isset($_POST[$name])) {
+                $result = sanitize_text_field( $_POST[$name] );
+            }
         }
 
         if (is_string($result)) {
@@ -220,6 +230,25 @@ class IRP_Utils {
         }
 
         return wp_kses( $result, $this->kses_allowed_html(), array('http', 'https', 'javascript') );
+    }
+
+    function sanitizeMargin($name, $default = '')
+    {
+        $result = $default;
+        if (isset($_GET[$name])) {
+            $result = sanitize_text_field( $_GET[$name] );
+        } else {
+            if (isset($_POST[$name])) {
+                $result = sanitize_text_field ( $_POST[$name] );
+            }
+        }
+
+        // Define a regular expression pattern to match invalid characters
+        $pattern = '/[^0-9pxem%rvwh]/';
+
+        $sanitizedString = preg_replace($pattern, '', $result);
+
+        return $sanitizedString;
     }
 
     function query($query, $args = NULL) {
@@ -300,7 +329,7 @@ class IRP_Utils {
         $data['secret'] = 'WYSIWYG';
         $response = wp_remote_post(IRP_INTELLYWP_ENDPOINT.'?iwpm_action=' . $action, array(
             'method' => 'POST'
-            , 'timeout' => 20
+            , 'timeout' => 2
             , 'redirection' => 5
             , 'httpversion' => '1.1'
             , 'blocking' => TRUE
@@ -454,7 +483,7 @@ class IRP_Utils {
         }
     
         wp_enqueue_script( 'irp_settings', IRP_PLUGIN_ASSETS . 'js/settings.js', array('jquery'), '1.2' );
-        wp_add_inline_script( 'irp_settings', 'const settings_data = ' . json_encode( $defs ) . ';', 'before' );
+        wp_add_inline_script( 'irp_settings', 'const settings_data = ' . wp_json_encode( $defs ) . ';', 'before' );
     }
 
     public function sort($isAssociative, $a1, $a2=NULL, $a3=NULL, $a4=NULL, $a5=NULL) {
